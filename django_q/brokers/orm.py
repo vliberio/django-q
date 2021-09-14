@@ -3,6 +3,7 @@ from time import sleep
 
 from django import db
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 
 from django_q.brokers import Broker
@@ -86,3 +87,6 @@ class ORM(Broker):
 
     def acknowledge(self, task_id):
         return self.delete(task_id)
+
+    def run(self, task_id):
+        self.get_connection().filter(pk=task_id).update(run_count=F('run_count') + 1)

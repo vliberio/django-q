@@ -79,6 +79,14 @@ class Broker:
         :param task_id:
         :return:
         """
+        pass
+
+    def run(self, task_id):
+        """
+        Increments the run counter of the task
+        :param task_id: the id of the task
+        """
+        pass
 
     def ping(self) -> bool:
         """
