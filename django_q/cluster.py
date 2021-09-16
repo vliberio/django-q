@@ -27,6 +27,7 @@ except core.exceptions.AppRegistryNotReady:
 from django.conf import settings
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django.db.models import F
 
 # Local
 import django_q.tasks
@@ -397,6 +398,29 @@ def monitor(result_queue: Queue, broker: Broker = None):
             logger.error(_(f"Failed [{task['name']}] - {task['result']}"))
     logger.info(_(f"{name} stopped monitoring results"))
 
+def registrar(running_queue: Queue, broker: Broker = None):
+    """
+    Gets started tasks from the running queue and increments their run count in Django
+    :type broker: brokers.Broker
+    :type running_queue: multiprocessing.Queue
+    """
+    if not broker:
+        broker = get_broker()
+    name = current_process().name
+    logger.info(_(f"{name} registering runs at {current_process().pid}"))
+    for task in iter(running_queue.get, "STOP"):
+        # save the result
+        if task.get("cached", False):
+            next
+
+        if Task.objects.filter(id=task["id"], name=task["name"]).exists():
+            existing_task = Task.objects.get(id=task["id"], name=task["name"])
+            existing_task.attempt_count = F('attempt_count') + 1
+            logger.info(_(f"Registered [{task['name']}]"))
+        else:
+            logger.info(_(f"Couldn't register [{task['name']}]"))
+        
+    logger.info(_(f"{name} stopped registering runs"))
 
 def worker(
     task_queue: Queue, result_queue: Queue, timer: Value, timeout: int = Conf.TIMEOUT
